@@ -1,81 +1,271 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>테이블탑 시뮬레이터</title>
-<link rel="stylesheet" href="style.css" />
-</head>
-<body>
+:root {
+  --bg: #14171c;
+  --panel: #1e232b;
+  --accent: #4f8ef7;
+  --felt: #1c4d33;
+  --text: #eef1f5;
+  --muted: #8a93a3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
 
-  <!-- 로비 화면 -->
-  <div id="lobby" class="screen">
-    <h1>🎲 테이블탑 시뮬레이터</h1>
-    <input id="nameInput" type="text" placeholder="닉네임" maxlength="20" />
-    <input id="roomInput" type="text" placeholder="방 코드 (없으면 자동 생성)" maxlength="20" />
-    <button id="joinBtn">입장 / 방 만들기</button>
-    <p class="hint">같은 방 코드를 공유하면 함께 플레이할 수 있어요.</p>
-  </div>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-  <!-- 게임 화면 -->
-  <div id="game" class="screen hidden">
-    <header id="topbar">
-      <span id="roomLabel"></span>
-      <span id="playerList"></span>
-      <button id="menuBtn">☰</button>
-    </header>
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
 
-    <div id="boardViewport">
-      <div id="boardInner"></div>
-      <div id="diceLog"></div>
-      <button id="resetViewBtn" title="화면 리셋">⤢</button>
-    </div>
+.hidden { display: none !important; }
 
-    <div id="sidePanel" class="hidden">
-      <section>
-        <h3>주사위</h3>
-        <div id="diceButtons"></div>
-        <div class="row">
-          <label>개수 <input id="diceCount" type="number" min="1" max="10" value="1" /></label>
-          <label>면수 <input id="diceSidesCustom" type="number" min="2" max="100" value="6" /></label>
-          <button id="rollCustom">굴리기</button>
-        </div>
-      </section>
+.screen { height: 100%; display: flex; flex-direction: column; }
 
-      <section>
-        <h3>말(토큰)</h3>
-        <div class="row" id="tokenColors"></div>
-        <button id="addTokenBtn">보드에 말 추가</button>
-        <p class="tip">두 손가락으로 말/카드를 비틀면 회전, 겹쳐 놓으면 더미로 쌓여요.</p>
-      </section>
+/* ---------- 로비 ---------- */
+#lobby {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+#lobby h1 { margin-bottom: 8px; font-size: 1.6rem; }
+#lobby input {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: var(--panel);
+  color: var(--text);
+}
+#lobby button {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+.hint { color: var(--muted); font-size: 0.85rem; }
 
-      <section>
-        <h3>카드 덱</h3>
-        <div class="row">
-          <button id="defaultDeckBtn">기본 덱 생성 (52장)</button>
-          <button id="numberDeckBtn">번호카드 덱 (1~20)</button>
-        </div>
-        <div class="row">
-          <button id="shuffleBtn">셔플</button>
-          <button id="drawBtn">드로우</button>
-        </div>
-        <div>덱 남음: <span id="deckCount">0</span> · 버림더미: <span id="discardCount">0</span></div>
-      </section>
+/* ---------- 게임 화면 ---------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--panel);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+#roomLabel { font-weight: 700; }
+#playerList { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#menuBtn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
 
-      <section>
-        <h3>보드 배경</h3>
-        <div class="row">
-          <label class="filebtn">이미지 선택<input id="boardImageInput" type="file" accept="image/*" /></label>
-          <button id="clearBoardImageBtn">배경 지우기</button>
-        </div>
-        <p class="tip">올린 이미지는 방의 모든 인원에게 보여요.</p>
-      </section>
-    </div>
+#boardViewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #0c0e12;
+  touch-action: none;
+}
+#boardInner {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: var(--felt);
+  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 70%);
+  background-size: cover;
+  background-position: center;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#resetViewBtn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(30,35,43,0.85);
+  color: var(--text);
+  font-size: 1.1rem;
+  z-index: 10;
+}
 
-    <div id="hand"></div>
-  </div>
+.token, .board-card {
+  position: absolute;
+  touch-action: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.75rem;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+.token {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.board-card {
+  width: 52px;
+  height: 72px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+.board-card.facedown {
+  background: repeating-linear-gradient(45deg, #34495e, #34495e 4px, #2c3e50 4px, #2c3e50 8px) !important;
+  color: transparent;
+}
+.stack-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #e74c3c;
+  color: white;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 1px solid rgba(255,255,255,0.7);
+}
+.token.stacked, .board-card.stacked {
+  box-shadow: 0 2px 0 rgba(0,0,0,0.35), 0 5px 0 rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.5);
+}
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
-</body>
-</html>
+#diceLog {
+  position: absolute;
+  top: 52px;
+  left: 8px;
+  right: 8px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+#diceLog .entry {
+  background: rgba(20,23,28,0.85);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  animation: fadeOut 4s forwards;
+}
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#sidePanel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 82%;
+  max-width: 320px;
+  height: 100%;
+  background: var(--panel);
+  z-index: 20;
+  padding: 16px;
+  overflow-y: auto;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.5);
+  touch-action: pan-y;
+}
+#sidePanel section { margin-bottom: 20px; }
+#sidePanel h3 { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+#sidePanel .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+#sidePanel button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.85rem;
+}
+#sidePanel input[type=number] {
+  width: 56px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+}
+#sidePanel label { font-size: 0.8rem; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+#sidePanel .tip { font-size: 0.75rem; color: var(--muted); margin: 4px 0 0; }
+.filebtn {
+  position: relative;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.85rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+.filebtn input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.swatch {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+.swatch.selected { border-color: white; }
+
+#diceButtons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+
+/* ---------- 손패 ---------- */
+#hand {
+  flex-shrink: 0;
+  height: 100px;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  overflow-x: auto;
+  touch-action: pan-x;
+}
+.hand-card {
+  flex-shrink: 0;
+  width: 56px;
+  height: 80px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #111;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  touch-action: none;
+}
