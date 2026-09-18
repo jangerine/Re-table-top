@@ -1,0 +1,213 @@
+:root {
+  --bg: #14171c;
+  --panel: #1e232b;
+  --accent: #4f8ef7;
+  --felt: #1c4d33;
+  --text: #eef1f5;
+  --muted: #8a93a3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.hidden { display: none !important; }
+
+.screen { height: 100%; display: flex; flex-direction: column; }
+
+/* ---------- 로비 ---------- */
+#lobby {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+#lobby h1 { margin-bottom: 8px; font-size: 1.6rem; }
+#lobby input {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: var(--panel);
+  color: var(--text);
+}
+#lobby button {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+.hint { color: var(--muted); font-size: 0.85rem; }
+
+/* ---------- 게임 화면 ---------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--panel);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+#roomLabel { font-weight: 700; }
+#playerList { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#menuBtn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+#board {
+  position: relative;
+  flex: 1;
+  background: var(--felt);
+  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 70%);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.token, .board-card {
+  position: absolute;
+  touch-action: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.75rem;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  transform: translate(-50%, -50%);
+}
+.token {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.board-card {
+  width: 52px;
+  height: 72px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+.board-card.facedown {
+  background: repeating-linear-gradient(45deg, #34495e, #34495e 4px, #2c3e50 4px, #2c3e50 8px) !important;
+  color: transparent;
+}
+
+#diceLog {
+  position: absolute;
+  top: 52px;
+  left: 8px;
+  right: 8px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+#diceLog .entry {
+  background: rgba(20,23,28,0.85);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  animation: fadeOut 4s forwards;
+}
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#sidePanel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 82%;
+  max-width: 320px;
+  height: 100%;
+  background: var(--panel);
+  z-index: 20;
+  padding: 16px;
+  overflow-y: auto;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.5);
+  touch-action: pan-y;
+}
+#sidePanel section { margin-bottom: 20px; }
+#sidePanel h3 { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+#sidePanel .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+#sidePanel button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.85rem;
+}
+#sidePanel input[type=number] {
+  width: 56px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+}
+#sidePanel label { font-size: 0.8rem; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+
+.swatch {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+.swatch.selected { border-color: white; }
+
+#diceButtons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+
+/* ---------- 손패 ---------- */
+#hand {
+  flex-shrink: 0;
+  height: 100px;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  overflow-x: auto;
+  touch-action: pan-x;
+}
+.hand-card {
+  flex-shrink: 0;
+  width: 56px;
+  height: 80px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #111;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  touch-action: none;
+}
