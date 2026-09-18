@@ -25,9 +25,11 @@
       <button id="menuBtn">☰</button>
     </header>
 
-    <div id="board"></div>
-
-    <div id="diceLog"></div>
+    <div id="boardViewport">
+      <div id="boardInner"></div>
+      <div id="diceLog"></div>
+      <button id="resetViewBtn" title="화면 리셋">⤢</button>
+    </div>
 
     <div id="sidePanel" class="hidden">
       <section>
@@ -44,6 +46,7 @@
         <h3>말(토큰)</h3>
         <div class="row" id="tokenColors"></div>
         <button id="addTokenBtn">보드에 말 추가</button>
+        <p class="tip">두 손가락으로 말/카드를 비틀면 회전, 겹쳐 놓으면 더미로 쌓여요.</p>
       </section>
 
       <section>
@@ -57,6 +60,15 @@
           <button id="drawBtn">드로우</button>
         </div>
         <div>덱 남음: <span id="deckCount">0</span> · 버림더미: <span id="discardCount">0</span></div>
+      </section>
+
+      <section>
+        <h3>보드 배경</h3>
+        <div class="row">
+          <label class="filebtn">이미지 선택<input id="boardImageInput" type="file" accept="image/*" /></label>
+          <button id="clearBoardImageBtn">배경 지우기</button>
+        </div>
+        <p class="tip">올린 이미지는 방의 모든 인원에게 보여요.</p>
       </section>
     </div>
 
