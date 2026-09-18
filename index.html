@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>테이블탑 시뮬레이터</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- 로비 화면 -->
+  <div id="lobby" class="screen">
+    <h1>🎲 테이블탑 시뮬레이터</h1>
+    <input id="nameInput" type="text" placeholder="닉네임" maxlength="20" />
+    <input id="roomInput" type="text" placeholder="방 코드 (없으면 자동 생성)" maxlength="20" />
+    <button id="joinBtn">입장 / 방 만들기</button>
+    <p class="hint">같은 방 코드를 공유하면 함께 플레이할 수 있어요.</p>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game" class="screen hidden">
+    <header id="topbar">
+      <span id="roomLabel"></span>
+      <span id="playerList"></span>
+      <button id="menuBtn">☰</button>
+    </header>
+
+    <div id="board"></div>
+
+    <div id="diceLog"></div>
+
+    <div id="sidePanel" class="hidden">
+      <section>
+        <h3>주사위</h3>
+        <div id="diceButtons"></div>
+        <div class="row">
+          <label>개수 <input id="diceCount" type="number" min="1" max="10" value="1" /></label>
+          <label>면수 <input id="diceSidesCustom" type="number" min="2" max="100" value="6" /></label>
+          <button id="rollCustom">굴리기</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>말(토큰)</h3>
+        <div class="row" id="tokenColors"></div>
+        <button id="addTokenBtn">보드에 말 추가</button>
+      </section>
+
+      <section>
+        <h3>카드 덱</h3>
+        <div class="row">
+          <button id="defaultDeckBtn">기본 덱 생성 (52장)</button>
+          <button id="numberDeckBtn">번호카드 덱 (1~20)</button>
+        </div>
+        <div class="row">
+          <button id="shuffleBtn">셔플</button>
+          <button id="drawBtn">드로우</button>
+        </div>
+        <div>덱 남음: <span id="deckCount">0</span> · 버림더미: <span id="discardCount">0</span></div>
+      </section>
+    </div>
+
+    <div id="hand"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
