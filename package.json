@@ -1,0 +1,16 @@
+{
+  "name": "tabletop-sim",
+  "version": "1.0.0",
+  "description": "브라우저 기반 범용 테이블탑 시뮬레이터 (모바일 지원, 실시간 멀티플레이)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
