@@ -23,10 +23,11 @@ function getOrCreateRoom(roomId) {
     rooms.set(roomId, {
       id: roomId,
       players: {},      // socketId -> { name, color }
-      tokens: {},        // tokenId -> { id, x, y, color, label }
-      cards: {},          // cardId -> { id, label, color, faceUp, location, x, y }
+      tokens: {},        // tokenId -> { id, x, y, rot, color, label, stack:[{id,color,label,rot}] }
+      cards: {},          // cardId -> { id, label, color, faceUp, location, x, y, rot, stack:[cardId] }
       deckOrder: [],      // array of cardId, top of deck = index 0
-      discardOrder: []    // array of cardId
+      discardOrder: [],   // array of cardId
+      boardImage: null    // 보드 배경 이미지 data URL
     });
   }
   return rooms.get(roomId);
@@ -37,7 +38,7 @@ function viewStateFor(room, viewerId) {
   const visibleCards = {};
   const handCounts = {};
   Object.values(room.cards).forEach((c) => {
-    if (c.location === 'board' || c.location === 'discard') {
+    if (c.location === 'board' || c.location === 'discard' || c.location.startsWith('stacked:')) {
       visibleCards[c.id] = c;
     } else if (c.location.startsWith('hand:')) {
       const owner = c.location.slice(5);
@@ -53,7 +54,8 @@ function viewStateFor(room, viewerId) {
     handCounts,
     deckCount: room.deckOrder.length,
     discardTop: room.discardOrder.length ? room.cards[room.discardOrder[0]] : null,
-    discardCount: room.discardOrder.length
+    discardCount: room.discardOrder.length,
+    boardImage: room.boardImage
   };
 }
 
@@ -103,7 +105,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomId);
     if (!room) return;
     const id = makeId('tok');
-    room.tokens[id] = { id, x: x ?? 50, y: y ?? 50, color: color || '#3498db', label: (label || '').slice(0, 6) };
+    room.tokens[id] = { id, x: x ?? 50, y: y ?? 50, rot: 0, color: color || '#3498db', label: (label || '').slice(0, 6), stack: [] };
     broadcastState(currentRoomId);
   });
 
@@ -115,6 +117,39 @@ io.on('connection', (socket) => {
     room.tokens[id].y = y;
     // 위치 갱신은 자주 발생하므로 브로드캐스트만, 상태 전체 재전송 대신 경량 이벤트
     socket.to(currentRoomId).emit('token:moved', { id, x, y });
+  });
+
+  socket.on('token:rotate', ({ id, rot }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.tokens[id]) return;
+    room.tokens[id].rot = ((rot % 360) + 360) % 360;
+    socket.to(currentRoomId).emit('token:rotated', { id, rot: room.tokens[id].rot });
+  });
+
+  // 토큰을 다른 토큰 위에 놓으면 하나의 더미로 합친다 (색/라벨/회전값을 스냅샷으로 보관)
+  socket.on('token:merge', ({ sourceId, targetId }) => {
+    if (!currentRoomId || sourceId === targetId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    const source = room.tokens[sourceId];
+    const target = room.tokens[targetId];
+    if (!source || !target) return;
+    target.stack = target.stack || [];
+    target.stack.push({ id: source.id, color: source.color, label: source.label, rot: source.rot || 0 });
+    delete room.tokens[sourceId];
+    broadcastState(currentRoomId);
+  });
+
+  // 더미 맨 위 토큰을 다시 꺼내 옆에 놓는다
+  socket.on('token:pop', ({ id }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    const target = room && room.tokens[id];
+    if (!target || !target.stack || !target.stack.length) return;
+    const popped = target.stack.pop();
+    room.tokens[popped.id] = { id: popped.id, x: Math.min(98, target.x + 4), y: Math.min(98, target.y + 4), rot: popped.rot || 0, color: popped.color, label: popped.label, stack: [] };
+    broadcastState(currentRoomId);
   });
 
   socket.on('token:remove', ({ id }) => {
@@ -135,7 +170,7 @@ io.on('connection', (socket) => {
     room.discardOrder = [];
     cards.forEach((c) => {
       const id = makeId('card');
-      room.cards[id] = { id, label: (c.label || '?').slice(0, 12), color: c.color || '#ecf0f1', faceUp: false, location: 'deck', x: 0, y: 0 };
+      room.cards[id] = { id, label: (c.label || '?').slice(0, 12), color: c.color || '#ecf0f1', faceUp: false, location: 'deck', x: 0, y: 0, rot: 0, stack: [] };
       room.deckOrder.push(id);
     });
     shuffle(room.deckOrder);
@@ -167,7 +202,46 @@ io.on('connection', (socket) => {
     room.cards[cardId].location = 'board';
     room.cards[cardId].x = x ?? 50;
     room.cards[cardId].y = y ?? 50;
+    room.cards[cardId].rot = 0;
     room.cards[cardId].faceUp = !!faceUp;
+    broadcastState(currentRoomId);
+  });
+
+  socket.on('card:rotate', ({ id, rot }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room || !room.cards[id]) return;
+    room.cards[id].rot = ((rot % 360) + 360) % 360;
+    socket.to(currentRoomId).emit('card:rotated', { id, rot: room.cards[id].rot });
+  });
+
+  // 카드를 다른 카드 위에 놓으면 더미로 합친다 (맨 위 = stack 배열의 마지막 원소)
+  socket.on('card:merge', ({ sourceId, targetId }) => {
+    if (!currentRoomId || sourceId === targetId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    const source = room.cards[sourceId];
+    const target = room.cards[targetId];
+    if (!source || !target || source.location !== 'board' || target.location !== 'board') return;
+    target.stack = target.stack || [];
+    target.stack.push(sourceId);
+    source.location = 'stacked:' + targetId;
+    broadcastState(currentRoomId);
+  });
+
+  // 더미 맨 위 카드 한 장을 다시 보드로 꺼낸다
+  socket.on('card:pop', ({ id }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    const target = room && room.cards[id];
+    if (!target || !target.stack || !target.stack.length) return;
+    const poppedId = target.stack.pop();
+    const popped = room.cards[poppedId];
+    if (popped) {
+      popped.location = 'board';
+      popped.x = Math.min(98, target.x + 4);
+      popped.y = Math.min(98, target.y + 4);
+    }
     broadcastState(currentRoomId);
   });
 
@@ -192,9 +266,25 @@ io.on('connection', (socket) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || !room.cards[id]) return;
-    room.cards[id].location = 'discard';
-    room.cards[id].faceUp = true;
-    room.discardOrder.unshift(id);
+    const base = room.cards[id];
+    const pileIds = [id, ...(base.stack || [])].reverse(); // 맨 위(stack 마지막)부터 버림더미 맨 위로
+    pileIds.forEach((cid) => {
+      const c = room.cards[cid];
+      if (!c) return;
+      c.location = 'discard';
+      c.faceUp = true;
+      room.discardOrder.unshift(cid);
+    });
+    base.stack = [];
+    broadcastState(currentRoomId);
+  });
+
+  // 보드 배경 이미지 설정 (data URL)
+  socket.on('board:setImage', ({ dataUrl } = {}) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    room.boardImage = typeof dataUrl === 'string' ? dataUrl.slice(0, 3_000_000) : null;
     broadcastState(currentRoomId);
   });
 
